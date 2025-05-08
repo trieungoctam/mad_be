@@ -6,8 +6,8 @@ from starlette.middleware.sessions import SessionMiddleware
 from fastapi.openapi.utils import get_openapi
 
 from app.core.config import settings
-from app.db.mongo import connect_to_mongo, close_mongo_connection
-from app.db.redis import connect_to_redis, close_redis_connection
+# from app.db.mongo import connect_to_mongo, close_mongo_connection
+# from app.db.redis import connect_to_redis, close_redis_connection
 from app.routers import api_router
 
 # Setup logging
@@ -87,15 +87,16 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     logger.info("Starting up application")
-    await connect_to_mongo()
-    await connect_to_redis()
-
+    # await connect_to_mongo()
+    # await connect_to_redis()
+    pass
 
 @app.on_event("shutdown")
 async def shutdown_event():
     logger.info("Shutting down application")
-    await close_mongo_connection()
-    await close_redis_connection()
+    # await close_mongo_connection()
+    # await close_redis_connection()
+    pass
 
 
 # Include API router

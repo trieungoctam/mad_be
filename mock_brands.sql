@@ -2,7 +2,7 @@
 
 -- Electronics Brands
 INSERT INTO brands (brand_name, description, logo_url, website, created_at, updated_at)
-VALUES 
+VALUES
 ('Apple', 'Công ty công nghệ đa quốc gia của Mỹ chuyên sản xuất điện thoại, máy tính và các thiết bị điện tử', 'https://example.com/images/brands/apple.png', 'https://www.apple.com', NOW(), NOW()),
 ('Samsung', 'Tập đoàn đa quốc gia của Hàn Quốc sản xuất điện thoại, tivi và thiết bị điện tử gia dụng', 'https://example.com/images/brands/samsung.png', 'https://www.samsung.com', NOW(), NOW()),
 ('Sony', 'Tập đoàn đa quốc gia của Nhật Bản chuyên về thiết bị điện tử, giải trí và game', 'https://example.com/images/brands/sony.png', 'https://www.sony.com', NOW(), NOW()),
@@ -11,7 +11,7 @@ VALUES
 
 -- Household Brands
 INSERT INTO brands (brand_name, description, logo_url, website, created_at, updated_at)
-VALUES 
+VALUES
 ('Electrolux', 'Tập đoàn đa quốc gia của Thụy Điển chuyên sản xuất thiết bị gia dụng', 'https://example.com/images/brands/electrolux.png', 'https://www.electrolux.com', NOW(), NOW()),
 ('Panasonic', 'Tập đoàn đa quốc gia của Nhật Bản sản xuất thiết bị điện tử và gia dụng', 'https://example.com/images/brands/panasonic.png', 'https://www.panasonic.com', NOW(), NOW()),
 ('Philips', 'Tập đoàn đa quốc gia của Hà Lan chuyên về thiết bị điện tử, y tế và gia dụng', 'https://example.com/images/brands/philips.png', 'https://www.philips.com', NOW(), NOW()),
@@ -20,7 +20,7 @@ VALUES
 
 -- Fashion Brands
 INSERT INTO brands (brand_name, description, logo_url, website, created_at, updated_at)
-VALUES 
+VALUES
 ('Zara', 'Thương hiệu thời trang nhanh của Tây Ban Nha thuộc tập đoàn Inditex', 'https://example.com/images/brands/zara.png', 'https://www.zara.com', NOW(), NOW()),
 ('H&M', 'Công ty thời trang đa quốc gia của Thụy Điển', 'https://example.com/images/brands/hm.png', 'https://www.hm.com', NOW(), NOW()),
 ('Uniqlo', 'Thương hiệu thời trang Nhật Bản thuộc tập đoàn Fast Retailing', 'https://example.com/images/brands/uniqlo.png', 'https://www.uniqlo.com', NOW(), NOW()),
@@ -29,9 +29,18 @@ VALUES
 
 -- Health & Beauty Brands
 INSERT INTO brands (brand_name, description, logo_url, website, created_at, updated_at)
-VALUES 
-('L\'Oréal', 'Tập đoàn mỹ phẩm lớn nhất thế giới của Pháp', 'https://example.com/images/brands/loreal.png', 'https://www.loreal.com', NOW(), NOW()),
+VALUES
+('LOréal', 'Tập đoàn mỹ phẩm lớn nhất thế giới của Pháp', 'https://example.com/images/brands/loreal.png', 'https://www.loreal.com', NOW(), NOW()),
 ('Nivea', 'Thương hiệu chăm sóc da của Đức thuộc tập đoàn Beiersdorf', 'https://example.com/images/brands/nivea.png', 'https://www.nivea.com', NOW(), NOW()),
-('Maybelline', 'Thương hiệu mỹ phẩm của Mỹ thuộc tập đoàn L\'Oréal', 'https://example.com/images/brands/maybelline.png', 'https://www.maybelline.com', NOW(), NOW()),
+('Maybelline', 'Thương hiệu mỹ phẩm của Mỹ thuộc tập đoàn LOréal', 'https://example.com/images/brands/maybelline.png', 'https://www.maybelline.com', NOW(), NOW()),
 ('Innisfree', 'Thương hiệu mỹ phẩm tự nhiên của Hàn Quốc thuộc tập đoàn Amore Pacific', 'https://example.com/images/brands/innisfree.png', 'https://www.innisfree.com', NOW(), NOW()),
 ('The Face Shop', 'Thương hiệu mỹ phẩm của Hàn Quốc thuộc tập đoàn LG', 'https://example.com/images/brands/thefaceshop.png', 'https://www.thefaceshop.com', NOW(), NOW());
+
+
+
+
+
+
+
+
+

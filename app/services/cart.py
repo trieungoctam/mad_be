@@ -10,12 +10,12 @@ from app.models.product import Product
 from app.schemas.cart import CartCreate, CartItemCreate, CartItemUpdate
 
 
-async def create_cart(db: AsyncSession, cart_in: CartCreate) -> Cart:
+async def create_cart(db: AsyncSession, cart_in: CartCreate, user_id: int) -> Cart:
     """
     Create a new cart
     """
     db_cart = Cart(
-        user_id=cart_in.user_id,
+        user_id=user_id,
         status=cart_in.status
     )
     db.add(db_cart)
@@ -32,7 +32,7 @@ async def get_cart(db: AsyncSession, cart_id: int) -> Optional[Cart]:
     return result.scalars().first()
 
 
-async def get_cart_items(db: AsyncSession, cart_id: int) -> List[CartItem]:
+async def get_cart_items(db: AsyncSession, cart_id: int):
     """
     Get all items in a cart
     """

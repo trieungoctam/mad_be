@@ -10,17 +10,13 @@ from app.schemas.base import PaginationParams
 from app.schemas.notification import (
     Notification,
     NotificationPaginated,
-    NotificationSettings,
-    NotificationUpdate,
 )
 from app.services.notification import (
     get_notification,
-    get_notifications,
-    get_notification_settings,
-    get_unread_notification_count,
+    get_user_notifications,
     mark_all_notifications_as_read,
     mark_notification_as_read,
-    update_notification_settings,
+    count_unread_notifications,
 )
 
 router = APIRouter()
@@ -36,8 +32,8 @@ async def read_notifications(
     """
     Get user's notifications with pagination
     """
-    return await get_notifications(
-        db=db, user_id=current_user.id, pagination=pagination, unread_only=unread_only
+    return await get_user_notifications(
+        db=db, user_id=current_user.id, limit=pagination.limit, offset=pagination.offset, unread_only=unread_only
     )
 
 
@@ -49,14 +45,13 @@ async def get_unread_count(
     """
     Get count of unread notifications
     """
-    count = await get_unread_notification_count(db=db, user_id=current_user.id)
+    count = await count_unread_notifications(db=db, user_id=current_user.id)
     return {"count": count}
 
 
 @router.put("/{notification_id}", response_model=Notification)
 async def mark_as_read(
     notification_id: int,
-    notification_in: NotificationUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
@@ -87,24 +82,24 @@ async def mark_all_read(
     return {"message": "All notifications marked as read"}
 
 
-@router.get("/settings", response_model=NotificationSettings)
-async def read_notification_settings(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-) -> Any:
-    """
-    Get user's notification settings
-    """
-    return await get_notification_settings(db=db, user_id=current_user.id)
+# @router.get("/settings", response_model=NotificationSettings)
+# async def read_notification_settings(
+#     db: AsyncSession = Depends(get_db),
+#     current_user: User = Depends(get_current_active_user),
+# ) -> Any:
+#     """
+#     Get user's notification settings
+#     """
+#     return await get_notification_settings(db=db, user_id=current_user.id)
 
 
-@router.put("/settings", response_model=NotificationSettings)
-async def update_settings(
-    settings: NotificationSettings,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-) -> Any:
-    """
-    Update notification settings
-    """
-    return await update_notification_settings(db=db, user_id=current_user.id, settings=settings)
+# @router.put("/settings", response_model=NotificationSettings)
+# async def update_settings(
+#     settings: NotificationSettings,
+#     db: AsyncSession = Depends(get_db),
+#     current_user: User = Depends(get_current_active_user),
+# ) -> Any:
+#     """
+#     Update notification settings
+#     """
+#     return await update_notification_settings(db=db, user_id=current_user.id, settings=settings)

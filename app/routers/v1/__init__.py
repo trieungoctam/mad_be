@@ -10,7 +10,7 @@ from app.routers.v1.carts import router as carts_router
 from app.routers.v1.orders import router as orders_router
 from app.routers.v1.payments import router as payments_router
 from app.routers.v1.shipments import router as shipments_router
-# from app.routers.v1.notifications import router as notifications_router
+from app.routers.v1.notifications import router as notifications_router
 
 api_router = APIRouter(prefix=settings.API_V1_STR)
 
@@ -23,4 +23,4 @@ api_router.include_router(orders_router, prefix="/orders", tags=["Orders"])
 api_router.include_router(shipments_router, prefix="/shipments", tags=["Shipments"])
 # api_router.include_router(barcodes_router, prefix="/barcodes", tags=["Barcodes"])
 api_router.include_router(payments_router, prefix="/payments", tags=["Payments"])
-# api_router.include_router(notifications_router, prefix="/notifications", tags=["Notifications"])
+api_router.include_router(notifications_router, prefix="/notifications", tags=["Notifications"])

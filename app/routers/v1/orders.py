@@ -48,7 +48,23 @@ async def create_new_order(
     """
     order = await create_order(db=db, user_id=current_user.id, order_in=order_in)
 
-    return order
+    # Convert SQLAlchemy model to dict for Pydantic
+    return {
+        "id": order.id,
+        "user_id": order.user_id,
+        "order_date": order.order_date,
+        "status": order.status,
+        "total_amount": order.total_amount,
+        "payment_status": order.payment_status,
+        "payment_method": order.payment_method,
+        "shipping_address_id": order.shipping_address_id,
+        "shipping_carrier": order.shipping_carrier,
+        "tracking_number": order.tracking_number,
+        "estimated_delivery_date": order.estimated_delivery_date,
+        "created_at": order.created_at,
+        "updated_at": order.updated_at,
+        "items": order.items
+    }
 
 
 @router.get("/{order_id}", response_model=Order)
@@ -69,7 +85,23 @@ async def read_order(
             detail="Order not found",
         )
 
-    return order
+    # Convert SQLAlchemy model to dict for Pydantic
+    return {
+        "id": order.id,
+        "user_id": order.user_id,
+        "order_date": order.order_date,
+        "status": order.status,
+        "total_amount": order.total_amount,
+        "payment_status": order.payment_status,
+        "payment_method": order.payment_method,
+        "shipping_address_id": order.shipping_address_id,
+        "shipping_carrier": order.shipping_carrier,
+        "tracking_number": order.tracking_number,
+        "estimated_delivery_date": order.estimated_delivery_date,
+        "created_at": order.created_at,
+        "updated_at": order.updated_at,
+        "items": order.items
+    }
 
 
 @router.put("/{order_id}", response_model=Order)
@@ -105,7 +137,23 @@ async def update_order_status_endpoint(
             user_id=current_user.id
         )
 
-    return order
+    # Convert SQLAlchemy model to dict for Pydantic
+    return {
+        "id": order.id,
+        "user_id": order.user_id,
+        "order_date": order.order_date,
+        "status": order.status,
+        "total_amount": order.total_amount,
+        "payment_status": order.payment_status,
+        "payment_method": order.payment_method,
+        "shipping_address_id": order.shipping_address_id,
+        "shipping_carrier": order.shipping_carrier,
+        "tracking_number": order.tracking_number,
+        "estimated_delivery_date": order.estimated_delivery_date,
+        "created_at": order.created_at,
+        "updated_at": order.updated_at,
+        "items": order.items
+    }
 
 
 @router.get("/{order_id}/track", response_model=None)

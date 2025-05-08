@@ -105,9 +105,9 @@ async def delete_old_notifications(db: AsyncSession, user_id: int, days: int = 3
     Delete notifications older than the specified number of days
     Returns the number of deleted notifications
     """
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone
 
-    cutoff_date = datetime.utcnow() - timedelta(days=days)
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
 
     result = await db.execute(
         select(Notification)

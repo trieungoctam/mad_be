@@ -15,6 +15,11 @@ class CartItemCreate(CartItemBase):
     pass
 
 
+class CartItemCreateList(BaseModel):
+    """Schema for adding a list of items to cart"""
+    items: List[CartItemCreate]
+
+
 class CartItemUpdate(BaseModel):
     """Schema for updating a cart item"""
     quantity: Optional[int] = None
@@ -28,7 +33,6 @@ class CartItem(CartItemBase):
     added_at: datetime
     product_name: Optional[str] = None
     product_image: Optional[str] = None
-    subtotal: float
 
 
 class CartBase(BaseModel):
