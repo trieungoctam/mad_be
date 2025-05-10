@@ -136,6 +136,42 @@ async def verify_email(
                 detail="Email not found",
             )
 
+        # Create access token
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            subject=user.id, expires_delta=access_token_expires
+        )
+
+        logger.info(f"User {user.id} logged in successfully")
+        return {"access_token": access_token, "token_type": "bearer"}
+
+    except Exception as e:
+        logger.error(f"Error during email verification: {str(e)}")
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error during email verification: {str(e)}",
+        )
+
+
+@router.post("/google")
+async def login_with_google(
+    email: str, db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Login with Google
+    """
+    try:
+        # Check if user with same email exists
+        logger.info(f"Checking if email {email} exists")
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalars().first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Email not found",
+            )
+
         return {"message": "Email verified successfully"}
 
     except Exception as e:
