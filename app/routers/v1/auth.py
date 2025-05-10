@@ -146,18 +146,22 @@ async def verify_email(
             detail=f"Error during email verification: {str(e)}",
         )
 
+from pydantic import BaseModel
+
+class GoogleLoginRequest(BaseModel):
+    email: str
 
 @router.post("/google")
 async def login_with_google(
-    email: str, db: AsyncSession = Depends(get_db)
+    request: GoogleLoginRequest, db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
     Login with Google
     """
     try:
         # Check if user with same email exists
-        logger.info(f"Checking if email {email} exists")
-        result = await db.execute(select(User).where(User.email == email))
+        logger.info(f"Checking if email {request.email} exists")
+        result = await db.execute(select(User).where(User.email == request.email))
         user = result.scalars().first()
         if not user:
             raise HTTPException(
