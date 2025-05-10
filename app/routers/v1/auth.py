@@ -136,14 +136,7 @@ async def verify_email(
                 detail="Email not found",
             )
 
-        # Create access token
-        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            subject=user.id, expires_delta=access_token_expires
-        )
-
-        logger.info(f"User {user.id} logged in successfully")
-        return {"access_token": access_token, "token_type": "bearer"}
+        return {"message": "Email verified successfully"}
 
     except Exception as e:
         logger.error(f"Error during email verification: {str(e)}")
@@ -172,7 +165,14 @@ async def login_with_google(
                 detail="Email not found",
             )
 
-        return {"message": "Email verified successfully"}
+        # Create access token
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            subject=user.id, expires_delta=access_token_expires
+        )
+
+        logger.info(f"User {user.id} logged in successfully")
+        return {"access_token": access_token, "token_type": "bearer"}
 
     except Exception as e:
         logger.error(f"Error during email verification: {str(e)}")
