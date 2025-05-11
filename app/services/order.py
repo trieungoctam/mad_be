@@ -64,7 +64,7 @@ async def create_order(db: AsyncSession, order_in: OrderCreate, user_id: int) ->
     order = Order(
         user_id=user_id,
         total_amount=order_in.total_amount,
-        status="completed",
+        status="pending",
         shipping_address_id=order_in.shipping_address_id,
         payment_method="card",
         payment_status="completed",
