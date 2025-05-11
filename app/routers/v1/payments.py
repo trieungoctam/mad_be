@@ -137,7 +137,7 @@ async def process_bank_card_payment(
             )
 
             # Update payment status based on processing result
-            payment.status = payment_bank_result.payment_status
+            payment.status = "completed"
             await db.commit()
             await db.refresh(payment)
 
@@ -217,7 +217,7 @@ async def process_bank_card_payment(
 # ) -> Any:
 #     """
 #     Process a COD payment for an order
-#     """
+#     """Router
 #     # Get the order
 #     order = await get_order(db=db, order_id=order_id)
 #     if not order:
