@@ -83,20 +83,14 @@ class PaymentResponse(BaseModel):
     """Schema for payment response"""
     success: bool
     message: str
-    transaction_id: Optional[int] = None
-    order_id: int
     payment_status: str
-    redirect_url: Optional[str] = None
 
     class Config:
         schema_extra = {
             "example": {
                 "success": True,
                 "message": "Payment successful",
-                "transaction_id": 123,
-                "order_id": 456,
                 "payment_status": "completed",
-                "redirect_url": None
             }
         }
 

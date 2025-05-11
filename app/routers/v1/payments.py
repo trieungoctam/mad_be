@@ -123,8 +123,17 @@ async def process_bank_card_payment(
             )
 
             # Update payment status based on processing result
-            payment.status = payment_result['status']
+            payment.status = payment_result['payment_status']
             await db.commit()
+            await db.refresh(payment)
+
+            return {
+                'success': payment_result['success'],
+                'status': payment_result['payment_status'],
+                'message': payment_result['message'],
+                'amount': payment.amount,
+                'idempotency_key': payment.idempotency_key
+            }
 
         except Exception as e:
             # If any error occurs during processing, roll back and mark as failed
@@ -154,6 +163,7 @@ async def process_bank_card_payment(
                 'amount': payment.amount,
                 'idempotency_key': payment.idempotency_key
             }
+
         elif payment.status == 'failed':
             # Previous attempt failed
             return {

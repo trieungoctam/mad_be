@@ -116,7 +116,7 @@ async def get_card(db: AsyncSession, card_id: int) -> Optional[CardSchema]:
     return None
 
 
-def validate_bank_card(card_details: BankCardDetails) -> tuple[bool, str]:
+def validate_bank_card(card_details: Dict[str, str]) -> tuple[bool, str]:
     """
     Validate bank card details
 
@@ -127,11 +127,11 @@ def validate_bank_card(card_details: BankCardDetails) -> tuple[bool, str]:
         Tuple of (is_valid, error_message)
     """
     # Extract card details
-    card_number = card_details.card_number.replace(" ", "")
-    card_holder = card_details.card_holder_name
-    expiry_month = card_details.expiry_month
-    expiry_year = card_details.expiry_year
-    cvv = card_details.cvv
+    card_number = card_details.get("card_number").replace(" ", "")
+    card_holder = card_details.get("card_holder_name")
+    expiry_month = card_details.get("expiry_month")
+    expiry_year = card_details.get("expiry_year")
+    cvv = card_details.get("cvv")
 
     # Basic validation
     if not card_number or not card_number.isdigit():
@@ -217,65 +217,44 @@ async def process_bank_card_payment(
         Payment response
     """
     # Validate card details
-    is_valid, error_message = validate_bank_card(card_details)
+    is_valid, error_message = validate_bank_card(card_dict)
 
     if not is_valid:
-        logger.warning(f"Invalid card details for order {order.id}: {error_message}")
+        logger.warning(f"Invalid card details for card {card_dict['card_number']}: {error_message}")
         return PaymentResponse(
             success=False,
             message=f"Payment failed: {error_message}",
-            order_id=order.id,
-            payment_status=order.payment_status
+            payment_status="failed"
         )
 
     # In a real implementation, this would call a payment gateway API
     # For this simulation, we'll generate a transaction ID and assume success
 
     # Generate a transaction reference (in real app, this would come from payment gateway)
-    transaction_ref = f"BANK-{secrets.token_hex(6).upper()}"
 
     # Mask card number for logging and storage
-    masked_card = mask_card_number(card_details.get("card_number", ""))
+    masked_card = mask_card_number(card_dict.get("card_number", ""))
 
     # Log the payment attempt (with masked card number)
     logger.info(
-        f"Processing bank card payment for order {order.id}: "
-        f"Amount: {order.total_amount}, Card: {masked_card}, Ref: {transaction_ref}"
+        f"Processing bank card payment for card {card_dict['card_number']}: "
+        f"Amount: {total_amount},"
+        f"Card: {masked_card}"
     )
 
     # Store minimal card details for reference
     payment_details = {
-        "card_last4": card_details.get("card_number", "")[-4:],
-        "card_brand": card_details.get("card_number", "").split(" ")[0],
-        "transaction_ref": transaction_ref
+        "card_last4": card_dict.get("card_number", "")[-4:],
+        "card_brand": card_dict.get("card_number", "").split(" ")[0],
     }
 
-    # Create order
+    # Payment
 
-    # Create transaction record
-    transaction = await create_transaction(
-        db=db,
-        transaction=dict(
-            order_id=order.id,
-            transaction_type=TransactionType.PAYMENT,
-            amount=order.total_amount,
-            payment_method="bank_card",
-            status=TransactionStatus.SUCCESS,
-            # Store minimal card details as JSON string
-            payment_details=json.dumps(payment_details)
-        ),
-        user_id=user_id
-    )
-
-    # Update order payment status
-    await update_payment_status(db, order, "completed", user_id)
 
     return PaymentResponse(
         success=True,
         message="Bank card payment successful",
-        transaction_id=transaction.id,
         payment_status="completed",
-        order_id=order.id
     )
 
 async def process_cod_payment(db: AsyncSession, order: Order, user_id: int) -> PaymentResponse:
