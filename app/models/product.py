@@ -7,10 +7,6 @@ from sqlalchemy.sql import func
 
 from app.db.base_class import Base
 
-if TYPE_CHECKING:
-    from .category import Category  # noqa: F401
-    from .brand import Brand  # noqa: F401
-
 
 class Product(Base):
     """Main product information"""
@@ -30,9 +26,6 @@ class Product(Base):
     # Relationships
     images = relationship("ProductImage", back_populates="product", cascade="all, delete-orphan")
     variants = relationship("ProductVariant", back_populates="product", cascade="all, delete-orphan")
-    favorites = relationship("Favorite", back_populates="product", cascade="all, delete-orphan")
-    list_items = relationship("ListItem", back_populates="product")
-    reviews = relationship("ProductReview", back_populates="product", cascade="all, delete-orphan")
     cart_items = relationship("CartItem", back_populates="product")
     order_items = relationship("OrderItem", back_populates="product")
     search_history = relationship("SearchHistory", back_populates="product")

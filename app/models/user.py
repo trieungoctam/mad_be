@@ -6,11 +6,11 @@ from sqlalchemy.types import DateTime as SQLADateTime
 from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
-from app.models.favorite import Favorite
+# from app.models.favorite import Favorite
 
 if TYPE_CHECKING:
     from .address import Address  # noqa: F401
-    from .shopping_list import ShoppingList  # noqa: F401
+    # from .shopping_list import ShoppingList  # noqa: F401
     from .order import Order  # noqa: F401
 
 
@@ -39,9 +39,10 @@ class User(Base):
     preferences = relationship("UserPreference", back_populates="user", cascade="all, delete-orphan")
     search_history = relationship("SearchHistory", back_populates="user", cascade="all, delete-orphan")
     barcode_scans = relationship("BarcodeScanHistory", back_populates="user", cascade="all, delete-orphan")
-    shopping_lists = relationship("ShoppingList", back_populates="user", cascade="all, delete-orphan")
-    shared_lists = relationship("SharedList", back_populates="user")
-    favorites = relationship("Favorite", back_populates="user", cascade="all, delete-orphan")
+    # shopping_lists = relationship("ShoppingList", back_populates="user", cascade="all, delete-orphan")
+    # shared_lists = relationship("SharedList", back_populates="user")
+    # favorites = relationship("Favorite", back_populates="user", cascade="all, delete-orphan")
     recommendations = relationship("ProductRecommendation", back_populates="user", cascade="all, delete-orphan")
-    reviews = relationship("ProductReview", back_populates="user", cascade="all, delete-orphan")
+    # reviews = relationship("ProductReview", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    cards = relationship("Card", back_populates="user", cascade="all, delete-orphan")

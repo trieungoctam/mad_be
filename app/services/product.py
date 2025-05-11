@@ -1,3 +1,4 @@
+import fastapi
 from typing import List, Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -6,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from math import ceil
 
 from app.models.product import Product, ProductVariant, ProductImage
-from app.models.user import User, Favorite
+from app.models.user import User
 from app.models.category import Category
 from app.models.brand import Brand
 from app.schemas.product import (
@@ -14,9 +15,39 @@ from app.schemas.product import (
     CategoryCreate, CategoryUpdate, BrandCreate, BrandUpdate,
     ProductVariantCreate, ProductVariantUpdate, ProductVariant as ProductVariantSchema
 )
-from app.models.favorite import Favorite
 
-async def get_product_variants(db: AsyncSession, product_id: int) -> List[ProductVariant]:
+async def get_all_brands(db: AsyncSession) -> List[Dict[str, Any]]:
+    """
+    Get all brands
+    """
+    result = await db.execute(select(Brand))
+    brands = result.scalars().all()
+    return [
+        {
+            "id": brand.id,
+            "name": brand.brand_name,
+            "description": brand.description,
+        }
+        for brand in brands
+    ]
+
+async def get_all_categories(db: AsyncSession) -> List[Dict[str, Any]]:
+    """
+    Get all categories
+    """
+    result = await db.execute(select(Category).where(Category.parent_id == None).order_by(Category.category_name))
+    categories = result.scalars().all()
+    return [
+        {
+            "id": category.id,
+            "name": category.category_name,
+            "description": category.description,
+        }
+        for category in categories
+    ]
+
+
+async def get_product_variants(db: AsyncSession, product_id: int) -> List[Dict[str, Any]]:
     """
     Get all variants for a product
 
@@ -25,12 +56,25 @@ async def get_product_variants(db: AsyncSession, product_id: int) -> List[Produc
         product_id: ID of the product to get variants for
 
     Returns:
-        List of product variants
+        List of dictionaries containing product variant data
     """
     result = await db.execute(select(ProductVariant).where(ProductVariant.product_id == product_id))
-    return result.scalars().all()
+    variants = result.scalars().all()
 
-async def get_product_variant(db: AsyncSession, variant_id: int) -> Optional[ProductVariant]:
+    # Convert SQLAlchemy objects to dictionaries
+    return [
+        {
+            "id": variant.id,
+            "product_id": variant.product_id,
+            "size": variant.size,
+            "stock": variant.stock,
+            "created_at": variant.created_at,
+            "updated_at": variant.updated_at
+        }
+        for variant in variants
+    ]
+
+async def get_product_variant(db: AsyncSession, variant_id: int) -> Optional[Dict[str, Any]]:
     """
     Get a product variant by ID
 
@@ -39,12 +83,25 @@ async def get_product_variant(db: AsyncSession, variant_id: int) -> Optional[Pro
         variant_id: ID of the variant to get
 
     Returns:
-        Product variant or None if not found
+        Dictionary containing product variant data or None if not found
     """
     result = await db.execute(select(ProductVariant).where(ProductVariant.id == variant_id))
-    return result.scalars().first()
+    variant = result.scalars().first()
 
-async def add_product_variant(db: AsyncSession, variant: ProductVariantCreate, user_id: int) -> ProductVariant:
+    if not variant:
+        return None
+
+    # Convert SQLAlchemy object to dictionary
+    return {
+        "id": variant.id,
+        "product_id": variant.product_id,
+        "size": variant.size,
+        "stock": variant.stock,
+        "created_at": variant.created_at,
+        "updated_at": variant.updated_at
+    }
+
+async def add_product_variant(db: AsyncSession, variant: ProductVariantCreate, user_id: int) -> Dict[str, Any]:
     """
     Add a variant for a product
 
@@ -54,7 +111,7 @@ async def add_product_variant(db: AsyncSession, variant: ProductVariantCreate, u
         user_id: ID of the user performing the action
 
     Returns:
-        Created product variant
+        Dictionary containing created product variant data
 
     Raises:
         ValueError: If product does not exist or variant with same size already exists
@@ -67,7 +124,7 @@ async def add_product_variant(db: AsyncSession, variant: ProductVariantCreate, u
     # Check if variant with same size already exists
     existing_variants = await get_product_variants(db, variant.product_id)
     for existing in existing_variants:
-        if existing.size.lower() == variant.size.lower():
+        if existing["size"].lower() == variant.size.lower():
             raise ValueError(f"Variant with size '{variant.size}' already exists for this product")
 
     db_variant = ProductVariant(
@@ -79,11 +136,19 @@ async def add_product_variant(db: AsyncSession, variant: ProductVariantCreate, u
     await db.commit()
     await db.refresh(db_variant)
 
-    return db_variant
+    # Convert SQLAlchemy object to dictionary
+    return {
+        "id": db_variant.id,
+        "product_id": db_variant.product_id,
+        "size": db_variant.size,
+        "stock": db_variant.stock,
+        "created_at": db_variant.created_at,
+        "updated_at": db_variant.updated_at
+    }
 
 async def update_product_variant(
     db: AsyncSession, variant: ProductVariant, variant_update: ProductVariantUpdate, user_id: int
-) -> ProductVariant:
+) -> Dict[str, Any]:
     """
     Update a product variant
 
@@ -94,18 +159,18 @@ async def update_product_variant(
         user_id: ID of the user performing the action
 
     Returns:
-        Updated product variant
+        Dictionary containing updated product variant data
 
     Raises:
         ValueError: If trying to update to a size that already exists
     """
-    update_data = variant_update.dict(exclude_unset=True)
+    update_data = variant_update.model_dump(exclude_unset=True)
 
     # If size is being updated, check for duplicates
     if "size" in update_data and update_data["size"] != variant.size:
         existing_variants = await get_product_variants(db, variant.product_id)
         for existing in existing_variants:
-            if existing.id != variant.id and existing.size.lower() == update_data["size"].lower():
+            if existing["id"] != variant.id and existing["size"].lower() == update_data["size"].lower():
                 raise ValueError(f"Variant with size '{update_data['size']}' already exists for this product")
 
     for field, value in update_data.items():
@@ -114,7 +179,15 @@ async def update_product_variant(
     await db.commit()
     await db.refresh(variant)
 
-    return variant
+    # Convert SQLAlchemy object to dictionary
+    return {
+        "id": variant.id,
+        "product_id": variant.product_id,
+        "size": variant.size,
+        "stock": variant.stock,
+        "created_at": variant.created_at,
+        "updated_at": variant.updated_at
+    }
 
 async def delete_product_variant(db: AsyncSession, variant: ProductVariant, user_id: int) -> None:
     """
@@ -240,7 +313,9 @@ async def get_products(
     for product in products:
         # Get variants and images
         product_variants = await get_product_variants(db, product.id)
+        print("Done get product variants")
         product_images = await get_product_image(db, product.id)
+        print("Done get product images")
 
         # Create a dictionary from product
         product_dict = {
@@ -283,12 +358,24 @@ async def add_product_image(db: AsyncSession, product_id: int, image_url: str) -
     await db.refresh(product)
     return product
 
-async def get_product_image(db: AsyncSession, product_id: int) -> List[ProductImage]:
+async def get_product_image(db: AsyncSession, product_id: int) -> List[Dict[str, Any]]:
     """
-    Get an image for a product
+    Get images for a product
     """
     result = await db.execute(select(ProductImage).where(ProductImage.product_id == product_id))
-    return result.scalars().all()
+    images = result.scalars().all()
+
+    # Convert SQLAlchemy objects to dictionaries
+    return [
+        {
+            "id": image.id,
+            "product_id": image.product_id,
+            "image_url": image.image_url,
+            "is_primary": image.is_primary,
+            "upload_date": image.upload_date
+        }
+        for image in images
+    ]
 
 async def get_product_by_barcode(db: AsyncSession, barcode: str) -> Optional[Dict[str, Any]]:
     """
@@ -378,10 +465,12 @@ async def delete_product(db: AsyncSession, product: Product, user_id: int) -> No
     await db.commit()
 
 
+# Comment out favorites-related functions
+"""
 async def is_favorite(db: AsyncSession, user_id: int, product_id: int) -> bool:
-    """
+    '''
     Check if a product is in user's favorites
-    """
+    '''
     result = await db.execute(
         select(Favorite)
         .where(Favorite.user_id == user_id)
@@ -390,112 +479,10 @@ async def is_favorite(db: AsyncSession, user_id: int, product_id: int) -> bool:
     return result.scalars().first() is not None
 
 
-async def search_products(
-    db: AsyncSession,
-    query: str,
-    category_id: Optional[int] = None,
-    brand_id: Optional[int] = None,
-    min_price: Optional[float] = None,
-    max_price: Optional[float] = None,
-    sort_by: Optional[str] = "name",
-    sort_order: Optional[str] = "asc",
-    include_details: bool = False,
-    limit: int = 10,
-    offset: int = 0
-) -> Dict[str, Any]:
-    """
-    Search for products by name, description, or barcode with advanced features
-    """
-    search_term = f"%{query}%"
-
-    # Build the search condition
-    search_condition = or_(
-        Product.product_name.ilike(search_term),
-        Product.description.ilike(search_term),
-        Product.barcode == query  # Exact match for barcode
-    )
-
-    # Add additional filters
-    filters = [search_condition]
-
-    if category_id:
-        filters.append(Product.category_id == category_id)
-
-    if brand_id:
-        filters.append(Product.brand_id == brand_id)
-
-    if min_price is not None:
-        filters.append(Product.price >= min_price)
-
-    if max_price is not None:
-        filters.append(Product.price <= max_price)
-
-    # Build base query
-    base_query = select(Product).where(and_(*filters))
-
-    # Count total results (for pagination)
-    count_query = select(func.count()).select_from(
-        base_query.subquery()
-    )
-    total_count = await db.execute(count_query)
-    total_count = total_count.scalar() or 0
-
-    # Apply sorting
-    if sort_by == "price":
-        sort_column = Product.price
-    elif sort_by == "name":
-        sort_column = Product.product_name
-    else:
-        sort_column = Product.id
-
-    if sort_order.lower() == "desc":
-        base_query = base_query.order_by(desc(sort_column))
-    else:
-        base_query = base_query.order_by(sort_column)
-
-    # Apply pagination
-    base_query = base_query.limit(limit).offset(offset)
-
-    # Execute query
-    result = await db.execute(base_query)
-    products = result.scalars().all()
-
-    # Create a list of products with complete information
-    product_list = []
-    for product in products:
-        # Get variants and images
-        product_variants = await get_product_variants(db, product.id)
-        product_images = await get_product_image(db, product.id)
-
-        # Create a dictionary from product
-        product_dict = {
-            "id": product.id,
-            "barcode": product.barcode,
-            "product_name": product.product_name,
-            "description": product.description,
-            "price": product.price,
-            "category_id": product.category_id,
-            "brand_id": product.brand_id,
-            "created_at": product.created_at,
-            "updated_at": product.updated_at,
-            "quantity": product.quantity,
-            "variants": product_variants,
-            "images": product_images
-        }
-        product_list.append(product_dict)
-
-    return {
-        "products": product_list,
-        "total": total_count
-    }
-
-
-
-# Favorites methods
 async def add_to_favorites(db: AsyncSession, user_id: int, product_id: int) -> Favorite:
-    """
+    '''
     Add a product to user's favorites
-    """
+    '''
     # Check if already in favorites
     result = await db.execute(
         select(Favorite)
@@ -503,7 +490,6 @@ async def add_to_favorites(db: AsyncSession, user_id: int, product_id: int) -> F
         .where(Favorite.product_id == product_id)
     )
     existing = result.scalars().first()
-
     if existing:
         return existing
 
@@ -520,9 +506,9 @@ async def add_to_favorites(db: AsyncSession, user_id: int, product_id: int) -> F
 
 
 async def remove_from_favorites(db: AsyncSession, user_id: int, product_id: int) -> None:
-    """
+    '''
     Remove a product from user's favorites
-    """
+    '''
     await db.execute(
         delete(Favorite)
         .where(Favorite.user_id == user_id)
@@ -537,39 +523,62 @@ async def get_user_favorites(
     skip: int = 0,
     limit: int = 10
 ) -> Dict[str, Any]:
-    """
+    '''
     Get all favorite products for a user with pagination
-    """
-    # Base query
-    base_query = (
+    '''
+    # Get favorites with products
+    query = (
         select(Product)
         .join(Favorite, Favorite.product_id == Product.id)
         .where(Favorite.user_id == user_id)
         .order_by(Favorite.added_at.desc())
+        .offset(skip)
+        .limit(limit)
     )
 
     # Count total favorites
-    count_query = select(func.count()).select_from(base_query.subquery())
-    total_count = await db.execute(count_query)
-    total = total_count.scalar() or 0
-
-    # Calculate total pages
-    pages = ceil(total / limit) if limit > 0 else 0
-
-    # Apply pagination
-    query = base_query.offset(skip).limit(limit)
+    count_query = (
+        select(func.count())
+        .select_from(Favorite)
+        .where(Favorite.user_id == user_id)
+    )
 
     result = await db.execute(query)
     products = result.scalars().all()
 
-    return {
-        "data": products,
-        "page": skip // limit + 1,
-        "limit": limit,
-        "total": total,
-        "pages": pages
-    }
+    count_result = await db.execute(count_query)
+    total = count_result.scalar()
 
+    # Get additional details for each product
+    result_products = []
+    for product in products:
+        product_variant = await get_product_variants(db, product.id)
+        product_dict = {
+            "id": product.id,
+            "barcode": product.barcode,
+            "product_name": product.product_name,
+            "description": product.description,
+            "price": product.price,
+            "category_id": product.category_id,
+            "brand_id": product.brand_id,
+            "created_at": product.created_at,
+            "updated_at": product.updated_at,
+            "quantity": product.quantity,
+            "variants": product_variant
+        }
+        result_products.append(product_dict)
+
+    # Calculate pagination details
+    pages = ceil(total / limit) if limit > 0 else 0
+
+    return {
+        "data": result_products,
+        "total": total,
+        "page": skip // limit + 1 if limit > 0 else 1,
+        "pages": pages,
+        "limit": limit
+    }
+"""
 
 # Category and Brand methods
 async def create_category(db: AsyncSession, category: CategoryCreate, user_id: int) -> Category:

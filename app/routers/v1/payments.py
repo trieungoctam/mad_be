@@ -11,54 +11,27 @@ from app.models.user import User
 from app.schemas.base import BaseAPIResponse
 from app.schemas.payment import (
     BankCardDetails,
-    PaymentRequest,
     PaymentResponse,
-    PaymentSetting,
-    PaymentSettingCreate,
-    PaymentSettingUpdate,
     Transaction,
     TransactionPaginated,
 )
+from app.schemas.order import OrderIn, OrderCreate
+from app.schemas.card import NewCard, Card
+from app.schemas.payment import PaymentSchema
+from app.models.payment import Payment
 from app.services.payment import (
-    create_payment_setting,
-    delete_payment_setting,
     get_order_transactions,
-    get_payment_settings,
-    get_user_transactions,
-    process_payment,
-    process_bank_card_payment,
+    process_bank_card_payment as service_process_bank_card_payment,
     save_bank_card,
-    update_payment_setting,
+    get_cards_by_user_id,
 )
 from app.services.order import get_order
+from app.services.order import create_order
 
 router = APIRouter()
 
 
-@router.get("/settings", response_model=List[PaymentSetting])
-async def read_payment_settings(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-) -> Any:
-    """
-    Get user's saved payment settings
-    """
-    return await get_payment_settings(db=db, user_id=current_user.id)
-
-
-@router.post("/settings", response_model=PaymentSetting, status_code=status.HTTP_201_CREATED)
-async def create_new_payment_setting(
-    payment_in: PaymentSettingCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-) -> Any:
-    """
-    Create a new payment setting
-    """
-    return await create_payment_setting(db=db, user_id=current_user.id, payment_setting=payment_in)
-
-
-@router.post("/settings/bank-card", response_model=PaymentSetting, status_code=status.HTTP_201_CREATED)
+@router.post("/bank-card", response_model=NewCard, status_code=status.HTTP_201_CREATED)
 async def save_bank_card_setting(
     card_details: BankCardDetails,
     db: AsyncSession = Depends(get_db),
@@ -71,85 +44,25 @@ async def save_bank_card_setting(
     Only minimal card information is stored for reference.
     """
     try:
-        # Convert Pydantic model to dict
-        card_details_dict = card_details.dict()
-
         # Save the bank card
-        return await save_bank_card(db=db, card_details=card_details_dict, user_id=current_user.id)
+        return await save_bank_card(db=db, card_details=card_details, user_id=current_user.id)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
 
-
-@router.put("/settings/{setting_id}", response_model=PaymentSetting)
-async def update_payment_settings(
-    setting_id: int,
-    payment_in: PaymentSettingUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-) -> Any:
+@router.get("/cards", response_model=List[Card])
+async def get_cards(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_active_user)) -> Any:
     """
-    Update a payment setting
+    Get all cards for a user
     """
-    return await update_payment_setting(
-        db=db, user_id=current_user.id, setting_id=setting_id, payment_in=payment_in
-    )
+    return await get_cards_by_user_id(db=db, user_id=current_user.id)
 
-
-@router.delete("/settings/{setting_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_payment_settings(
-    setting_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-) -> None:
-    """
-    Delete a payment setting
-    """
-    await delete_payment_setting(db=db, user_id=current_user.id, setting_id=setting_id)
-
-
-@router.post("/process", response_model=PaymentResponse)
-async def process_order_payment(
-    payment_request: PaymentRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-) -> Any:
-    """
-    Process payment for an order using the specified payment method
-    """
-    # Get the order
-    order = await get_order(db=db, order_id=payment_request.order_id)
-    if not order:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Order not found"
-        )
-
-    # Check if order belongs to the current user
-    if order.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this order"
-        )
-
-    # Process payment
-    payment_result = await process_payment(
-        db=db,
-        order=order,
-        payment_request=payment_request,
-        user_id=current_user.id
-    )
-
-    # Return payment response
-    return payment_result
-
-
-@router.post("/bank-card", response_model=PaymentResponse)
-async def process_bank_card_payment_endpoint(
-    order_id: int,
-    card_details: BankCardDetails,
+@router.post("/process-payment/card/{card_id}", response_model=PaymentResponse)
+async def process_bank_card_payment(
+    card_id: int,
+    order_in: OrderIn,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
@@ -159,60 +72,193 @@ async def process_bank_card_payment_endpoint(
     This endpoint provides a dedicated path for bank card payments with proper validation.
     """
     # Get the order
-    order = await get_order(db=db, order_id=order_id)
-    if not order:
+    result = await db.execute(select(Card).where(Card.id == card_id))
+    card = result.scalar_one_or_none()
+    if not card:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Order not found"
+            detail="Card not found"
         )
-
-    # Check if order belongs to the current user
-    if order.user_id != current_user.id:
+    # Check if card belongs to current user
+    if card.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this order"
+            detail="Not authorized to use this card"
         )
 
-    # Check if order is already paid
-    if order.payment_status == "completed":
-        return PaymentResponse(
-            success=False,
-            message="Order is already paid",
-            transaction_id=None,
-            payment_status="completed",
-            order_id=order.id
-        )
+    # Check for existing payment with same idempotency key
+    payment_result = await db.execute(select(Payment).where(Payment.idempotency_key == order_in.idempotency_key))
+    payment = payment_result.scalar_one_or_none()
+    if not payment:
+        # No existing payment found, create a new one
+        try:
+            # Create card_dict for payment processing
+            card_dict = {
+                "card_number": card.card_number,
+                "card_holder_name": card.card_holder_name,
+                "expiry_month": card.expiry_month,
+                "expiry_year": card.expiry_year,
+                "cvv": order_in.cvv
+            }
 
-    # Convert Pydantic model to dict
-    card_details_dict = card_details.dict()
+            # Create initial payment record with pending status
+            payment = Payment(
+                idempotency_key=order_in.idempotency_key,
+                amount=order_in.total_amount,
+                status='pending',
+                user_id=current_user.id,
+                card_id=card_id,
+                order_id=None  # Will be updated after order creation
+            )
+            db.add(payment)
+            await db.commit()
+            await db.refresh(payment)
 
-    # Process bank card payment
-    payment_result = await process_bank_card_payment(
-        db=db,
-        order=order,
-        card_details=card_details_dict,
-        user_id=current_user.id
-    )
+            # Process the payment
+            payment_result = await service_process_bank_card_payment(
+                db=db,
+                card_dict=card_dict,
+                total_amount=order_in.total_amount,
+                user_id=current_user.id
+            )
 
-    return payment_result
+            # Update payment status based on processing result
+            payment.status = payment_result['status']
+            await db.commit()
+
+        except Exception as e:
+            # If any error occurs during processing, roll back and mark as failed
+            await db.rollback()
+
+            if payment and payment.id:
+                payment.status = 'failed'
+                payment.error_message = str(e)
+                await db.commit()
+
+            return {
+                'success': False,
+                'status': 'failed',
+                'message': f"Payment processing failed: {str(e)}",
+                'amount': order_in.total_amount,
+                'idempotency_key': order_in.idempotency_key
+            }
+    else:
+        # Payment with this idempotency key already exists
+        # Return its current status without reprocessing
+        if payment.status == 'pending':
+            # Payment still being processed, inform client
+            return {
+                'success': False,
+                'status': 'pending',
+                'message': 'Payment is being processed',
+                'amount': payment.amount,
+                'idempotency_key': payment.idempotency_key
+            }
+        elif payment.status == 'failed':
+            # Previous attempt failed
+            return {
+                'success': False,
+                'status': 'failed',
+                'message': payment.error_message or 'Previous payment attempt failed',
+                'amount': payment.amount,
+                'idempotency_key': payment.idempotency_key
+            }
+        else:
+            # Payment succeeded previously
+            payment_result = {
+                'success': True,
+                'status': payment.status,
+                'amount': payment.amount,
+                'idempotency_key': payment.idempotency_key
+            }
+
+    # If payment successful, create order if not already created
+    if payment_result.get('status') == 'success' or payment.status == 'success':
+        try:
+            if not payment.order_id:
+                order_create = OrderCreate(
+                    items=order_in.items,
+                    shipping_address_id=order_in.shipping_address_id,
+                    payment_method='card',
+                    payment_status='pending',
+                    user_id=current_user.id
+                )
+                order = await create_order(db=db, order_in=order_create, user_id=current_user.id)
+                # Update payment with order ID
+                payment.order_id = order.id
+                await db.commit()
+
+            return {
+                'success': True,
+                'status': 'success',
+                'message': 'Payment processed successfully',
+                'amount': payment.amount,
+                'order_id': payment.order_id,
+                'idempotency_key': payment.idempotency_key
+            }
+        except Exception as e:
+            # Order creation failed
+            return {
+                'success': False,
+                'status': 'payment_succeeded_order_failed',
+                'message': f"Payment succeeded but order creation failed: {str(e)}",
+                'amount': payment.amount,
+                'idempotency_key': payment.idempotency_key
+            }
+
+    # Payment failed
+    return {
+        'success': False,
+        'status': payment_result.get('status', 'failed'),
+        'message': payment_result.get('message', 'Payment processing failed'),
+        'amount': payment.amount,
+        'idempotency_key': payment.idempotency_key
+    }
 
 
-@router.get("/transactions", response_model=TransactionPaginated)
-async def read_transactions(
-    pagination: int = 1,
-    limit: int = 10,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-) -> Any:
-    """
-    Get user's transaction history
-    """
-    return await get_user_transactions(
-        db=db, user_id=current_user.id, limit=limit, offset=(pagination-1)*limit
-    )
+# @router.post("/process-payment/cod", response_model=PaymentResponse)
+# async def process_cod_payment(
+#     order_in: OrderIn,
+#     db: AsyncSession = Depends(get_db),
+#     current_user: User = Depends(get_current_active_user),
+# ) -> Any:
+#     """
+#     Process a COD payment for an order
+#     """
+#     # Get the order
+#     order = await get_order(db=db, order_id=order_id)
+#     if not order:
+#         raise HTTPException(
+#             status_code=status.HTTP_404_NOT_FOUND,
+#             detail="Order not found"
+#         )
 
+#     # Check if order belongs to the current user
+#     if order.user_id != current_user.id:
+#         raise HTTPException(
+#             status_code=status.HTTP_403_FORBIDDEN,
+#             detail="Not authorized to access this order"
+#         )
 
-@router.get("/transactions/order/{order_id}", response_model=List[Transaction])
+#     # Check if order is already paid
+#     if order.payment_status == "completed":
+#         return PaymentResponse(
+#             success=False,
+#             message="Order is already paid",
+#             transaction_id=None,
+#             payment_status="completed",
+#             order_id=order.id
+#         )
+
+#     return PaymentResponse(
+#         success=True,
+#         message="COD payment processed successfully",
+#         transaction_id=None,
+#         payment_status="pending",
+#         order_id=order.id
+#     )
+
+@router.get("/transactions/order/{order_id}", response_model=List[PaymentSchema])
 async def read_order_transactions(
     order_id: int,
     db: AsyncSession = Depends(get_db),

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from app.models.order import OrderStatus, PaymentStatus
+from app.models.order import OrderStatus
 from app.models.transaction import TransactionStatus, TransactionType
 from app.schemas.base import BaseModel, PaginatedResponse
 
@@ -10,7 +10,6 @@ class OrderItemBase(BaseModel):
     """Base schema for order item data"""
     product_id: int
     quantity: int = 1
-    unit_price: float
 
 
 class OrderItemCreate(OrderItemBase):
@@ -21,7 +20,6 @@ class OrderItemCreate(OrderItemBase):
 class OrderItemUpdate(BaseModel):
     """Schema for updating an existing order item"""
     quantity: Optional[int] = None
-    unit_price: Optional[float] = None
 
 
 class OrderItem(OrderItemBase):
@@ -46,10 +44,8 @@ class OrderBase(BaseModel):
     status: str = OrderStatus.PENDING
     shipping_address_id: int
     payment_method: str
-    payment_status: str = PaymentStatus.UNPAID
     shipping_carrier: Optional[str] = None
     tracking_number: Optional[str] = None
-    estimated_delivery_date: Optional[datetime] = None
 
 
 class OrderCreate(OrderBase):
@@ -87,6 +83,16 @@ class Order(OrderBase):
 
     class Config:
         from_attributes = True
+
+class OrderIn(BaseModel):
+    """Schema for order input"""
+    user_id: int
+    idempotency_key: str
+    total_amount: float
+    status: str = OrderStatus.PENDING
+    shipping_address_id: int
+    items: List[OrderItemBase]
+    cvv: int
 
 
 class OrderPaginated(PaginatedResponse):

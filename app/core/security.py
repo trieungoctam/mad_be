@@ -71,3 +71,24 @@ def get_password_hash(password: str) -> str:
         Secure hash of the password
     """
     return pwd_context.hash(password)
+
+from cryptography.fernet import Fernet
+import base64
+import hashlib
+
+# Tạo khóa đúng định dạng 32 byte cho Fernet
+key = "MAD_PTIT_KEY_FOR_ENCRYPTION_AND_SECURITY"
+# Sử dụng SHA-256 để đảm bảo độ dài 32 byte
+key_bytes = hashlib.sha256(key.encode()).digest()
+# Mã hóa base64 url-safe
+fernet_key = base64.urlsafe_b64encode(key_bytes)
+# Khởi tạo đối tượng Fernet
+fernet = Fernet(fernet_key)
+
+def encrypt_data(data: str) -> str:
+    """Mã hóa dữ liệu nhạy cảm"""
+    return fernet.encrypt(data.encode()).decode()
+
+def decrypt_data(encrypted_data: str) -> str:
+    """Giải mã dữ liệu"""
+    return fernet.decrypt(encrypted_data.encode()).decode()

@@ -24,7 +24,7 @@ class TransactionHistory(Base):
     __tablename__ = "transaction_history"
 
     id = Column(Integer, primary_key=True, index=True)
-    order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
+    # order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
     transaction_type = Column(String(20), default=TransactionType.PAYMENT)
     amount = Column(Float, nullable=False)
     payment_method = Column(String(50), nullable=False)
@@ -32,4 +32,4 @@ class TransactionHistory(Base):
     transaction_date = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    order = relationship("Order", back_populates="transactions")
+    # order = relationship("Order", back_populates="transactions")

@@ -14,13 +14,11 @@ class OrderStatus(str, Enum):
     SHIPPED = "shipped"
     CANCELLED = "cancelled"
 
-
 class PaymentStatus(str, Enum):
-    UNPAID = "unpaid"
-    PAID = "paid"
-    REFUNDED = "refunded"
+    PENDING = "pending"
+    COMPLETED = "completed"
     FAILED = "failed"
-
+    REFUNDED = "refunded"
 
 class Order(Base):
     """User orders"""
@@ -36,16 +34,16 @@ class Order(Base):
     payment_status = Column(String(20), default="pending")  # pending, paid, failed, refunded
 
     # Shipping tracking
-    shipping_carrier = Column(String(100), nullable=True)
-    tracking_number = Column(String(100), nullable=True)
-    estimated_delivery_date = Column(DateTime(timezone=True), nullable=True)
+    # shipping_carrier = Column(String(100), nullable=True)
+    # tracking_number = Column(String(100), nullable=True)
+    # estimated_delivery_date = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="orders")
     shipping_address = relationship("Address")
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
-    transactions = relationship("TransactionHistory", back_populates="order", cascade="all, delete-orphan")
-    shipment = relationship("Shipment", back_populates="order", uselist=False, cascade="all, delete-orphan")
+    # transactions = relationship("TransactionHistory", back_populates="order", cascade="all, delete-orphan")
+    shipment = relationship("Shipment", back_populates="order", cascade="all, delete-orphan")
 
 
 class OrderItem(Base):
@@ -56,8 +54,7 @@ class OrderItem(Base):
     order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     quantity = Column(Integer, nullable=False, default=1)
-    unit_price = Column(Float, nullable=False)
-    subtotal = Column(Float, nullable=False)
+    # subtotal = Column(Float, nullable=False)
 
     # Relationships
     order = relationship("Order", back_populates="items")

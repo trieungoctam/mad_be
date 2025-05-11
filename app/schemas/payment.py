@@ -59,7 +59,6 @@ class BankCardDetails(BaseModel):
     expiry_month: str
     expiry_year: str
     cvv: str
-
     class Config:
         schema_extra = {
             "example": {
@@ -105,3 +104,14 @@ class PaymentResponse(BaseModel):
 class TransactionPaginated(PaginatedResponse[List[Transaction]]):
     """Schema for paginated transactions"""
     pass
+
+class PaymentSchema (BaseModel):
+    """Schema for payment details"""
+    user_id: int
+    card_id: int
+    order_id: int
+    amount: float
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
