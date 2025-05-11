@@ -22,7 +22,7 @@ from app.services.order import (
 router = APIRouter()
 
 
-@router.get("/", response_model=OrderPaginated)
+@router.get("/")
 async def read_orders(
     pagination: PaginationParams = Depends(),
     status: OrderStatus = None,
@@ -32,9 +32,22 @@ async def read_orders(
     """
     Get all current user's orders with pagination and filtering
     """
-    return await get_user_orders(
+    data = await get_user_orders(
         db=db, user_id=current_user.id, pagination=pagination, status=status
     )
+    orders = data["data"]
+    orders_list = [
+        {
+            "id": order.id,
+            "user_id": order.user_id,
+            "order_date": order.order_date,
+            "status": order.status,
+            "total_amount": order.total_amount,
+            "payment_status": order.payment_status,
+            "payment_method": order.payment_method
+        } for order in orders
+    ]
+    return orders_list
 
 @router.get("/{order_id}", response_model=Order)
 async def read_order(

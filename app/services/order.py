@@ -64,13 +64,13 @@ async def create_order(db: AsyncSession, order_in: OrderCreate, user_id: int) ->
     order = Order(
         user_id=user_id,
         total_amount=order_in.total_amount,
-        status=order_in.status,
+        status="completed",
         shipping_address_id=order_in.shipping_address_id,
-        payment_method=order_in.payment_method,
-        payment_status=order_in.payment_status,
-        shipping_carrier=order_in.shipping_carrier,
-        tracking_number=order_in.tracking_number,
-        estimated_delivery_date=order_in.estimated_delivery_date
+        payment_method="card",
+        payment_status="completed",
+        # shipping_carrier=order_in.shipping_carrier,
+        # tracking_number=order_in.tracking_number,
+        # estimated_delivery_date=order_in.estimated_delivery_date
     )
     db.add(order)
     await db.flush()  # To get the order ID
@@ -78,17 +78,35 @@ async def create_order(db: AsyncSession, order_in: OrderCreate, user_id: int) ->
     # Create order items
     total_amount = 0
     for item_data in order_in.items:
+        product = await db.get(Product, item_data.product_id)
+        if not product:
+            raise ValueError(f"Product with ID {item_data.product_id} not found")
+
+        # check variant stock
+        variant_result = await db.execute(
+            select(ProductVariant).where(ProductVariant.product_id == item_data.product_id)
+        )
+        variants = variant_result.scalars().all()
+
+        if variants:
+            total_variant_stock = sum(variant.stock for variant in variants)
+            if total_variant_stock < item_data.quantity:
+                raise ValueError(f"Insufficient stock for product {product.product_name}. Available: {total_variant_stock}, Requested: {item_data.quantity}")
+        else:
+            if product.quantity < item_data.quantity:
+                raise ValueError(f"Insufficient stock for product {product.product_name}. Available: {product.quantity}, Requested: {item_data.quantity}")
+
         # Calculate subtotal for this item
-        subtotal = item_data.unit_price * item_data.quantity
-        total_amount += subtotal
+        # subtotal = item_data.unit_price * item_data.quantity
+        total_amount += product.price * item_data.quantity
 
         # Create order item
         order_item = OrderItem(
             order_id=order.id,
             product_id=item_data.product_id,
             quantity=item_data.quantity,
-            unit_price=item_data.unit_price,
-            subtotal=subtotal
+            # unit_price=product.price,
+            # subtotal=subtotal
         )
         db.add(order_item)
 
@@ -98,13 +116,13 @@ async def create_order(db: AsyncSession, order_in: OrderCreate, user_id: int) ->
     await db.refresh(order)
 
     # Create notification for order creation
-    await create_notification(
-        db=db,
-        user_id=user_id,
-        notification_type="ORDER_CREATED",
-        content=f"Your order #{order.id} has been created.",
-        related_entity_id=order.id
-    )
+    # await create_notification(
+    #     db=db,
+    #     user_id=user_id,
+    #     notification_type="ORDER_CREATED",
+    #     content=f"Your order #{order.id} has been created.",
+    #     related_entity_id=order.id
+    # )
 
     return order
 

@@ -19,7 +19,7 @@ from app.schemas.payment import (
     Transaction,
     TransactionPaginated,
 )
-from app.schemas.order import OrderIn, OrderCreate
+from app.schemas.order import OrderIn, OrderCreate, OrderItemCreate
 from app.schemas.card import NewCard, Card as CardSchema
 from app.schemas.payment import PaymentSchema
 from app.services.payment import (
@@ -105,6 +105,7 @@ async def process_bank_card_payment(
     if not payment:
         # No existing payment found, create a new one
         try:
+            print("Creating new payment")
             # Create card_dict for payment processing
             card_dict = {
                 "card_number": card.card_number,
@@ -121,14 +122,14 @@ async def process_bank_card_payment(
                 status='pending',
                 user_id=current_user.id,
                 card_id=card_id,
-                order_id=None  # Will be updated after order creation
+                # order_id=None  # Will be updated after order creation
             )
             db.add(payment)
             await db.commit()
             await db.refresh(payment)
 
             # Process the payment
-            payment_result = await service_process_bank_card_payment(
+            payment_bank_result = await service_process_bank_card_payment(
                 db=db,
                 card_dict=card_dict,
                 total_amount=order_in.total_amount,
@@ -136,17 +137,9 @@ async def process_bank_card_payment(
             )
 
             # Update payment status based on processing result
-            payment.status = payment_result['payment_status']
+            # payment.status = payment_bank_result.payment_status
             await db.commit()
             await db.refresh(payment)
-
-            return {
-                'success': payment_result['success'],
-                'status': payment_result['payment_status'],
-                'message': payment_result['message'],
-                'amount': payment.amount,
-                'idempotency_key': payment.idempotency_key
-            }
 
         except Exception as e:
             # If any error occurs during processing, roll back and mark as failed
@@ -157,86 +150,63 @@ async def process_bank_card_payment(
                 payment.error_message = str(e)
                 await db.commit()
 
-            return {
-                'success': False,
-                'status': 'failed',
-                'message': f"Payment processing failed: {str(e)}",
-                'amount': order_in.total_amount,
-                'idempotency_key': order_in.idempotency_key
-            }
+            return PaymentResponse(
+                success=False,
+                message=f"Payment processing failed: {str(e)}",
+                payment_status='failed'
+            )
+
     else:
-        # Payment with this idempotency key already exists
-        # Return its current status without reprocessing
-        if payment.status == 'pending':
-            # Payment still being processed, inform client
-            return {
-                'success': False,
-                'status': 'pending',
-                'message': 'Payment is being processed',
-                'amount': payment.amount,
-                'idempotency_key': payment.idempotency_key
-            }
+        print("Payment already exists =========================")
 
-        elif payment.status == 'failed':
-            # Previous attempt failed
-            return {
-                'success': False,
-                'status': 'failed',
-                'message': payment.error_message or 'Previous payment attempt failed',
-                'amount': payment.amount,
-                'idempotency_key': payment.idempotency_key
-            }
-        else:
-            # Payment succeeded previously
-            payment_result = {
-                'success': True,
-                'status': payment.status,
-                'amount': payment.amount,
-                'idempotency_key': payment.idempotency_key
-            }
-
+    print("Payment status: ", payment.status)
     # If payment successful, create order if not already created
-    if payment_result.get('status') == 'success' or payment.status == 'success':
+    if payment.status == 'completed':
         try:
-            if not payment.order_id:
-                order_create = OrderCreate(
-                    items=order_in.items,
-                    shipping_address_id=order_in.shipping_address_id,
-                    payment_method='card',
-                    payment_status='pending',
-                    user_id=current_user.id
+            order = await db.get(Order, payment.order_id)
+            if order:
+                return PaymentResponse(
+                    success=True,
+                    message='Payment already exists and order created',
+                    payment_status='completed'
                 )
-                order = await create_order(db=db, order_in=order_create, user_id=current_user.id)
-                # Update payment with order ID
-                payment.order_id = order.id
-                await db.commit()
 
-            return {
-                'success': True,
-                'status': 'success',
-                'message': 'Payment processed successfully',
-                'amount': payment.amount,
-                'order_id': payment.order_id,
-                'idempotency_key': payment.idempotency_key
-            }
+            items = [OrderItemCreate(
+                product_id=item.product_id,
+                quantity=item.quantity
+            ) for item in order_in.items]
+            order_create = OrderCreate(
+                total_amount=order_in.total_amount,
+                items=items,
+                shipping_address_id=order_in.shipping_address_id,
+                payment_method='card',
+                payment_status='completed',
+                user_id=current_user.id
+            )
+            order = await create_order(db=db, order_in=order_create, user_id=current_user.id)
+            # Update payment with order ID
+            payment.order_id = order.id
+            await db.commit()
+
+            return PaymentResponse(
+                success=True,
+                message='Payment processed successfully and order created',
+                payment_status='completed'
+            )
         except Exception as e:
             # Order creation failed
-            return {
-                'success': False,
-                'status': 'payment_succeeded_order_failed',
-                'message': f"Payment succeeded but order creation failed: {str(e)}",
-                'amount': payment.amount,
-                'idempotency_key': payment.idempotency_key
-            }
+            return PaymentResponse(
+                success=False,
+                message=f"Payment succeeded but order creation failed: {str(e)}",
+                payment_status='failed'
+            )
 
     # Payment failed
-    return {
-        'success': False,
-        'status': payment_result.get('status', 'failed'),
-        'message': payment_result.get('message', 'Payment processing failed'),
-        'amount': payment.amount,
-        'idempotency_key': payment.idempotency_key
-    }
+    return PaymentResponse(
+        success=False,
+        message="Payment failed",
+        payment_status=payment.status
+    )
 
 
 # @router.post("/process-payment/cod", response_model=PaymentResponse)

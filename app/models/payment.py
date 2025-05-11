@@ -28,7 +28,7 @@ class Payment(Base):
     card_id = Column(Integer, ForeignKey("cards.id", ondelete="CASCADE"), nullable=False)
     amount = Column(Integer, nullable=False)
     status = Column(String(50), nullable=False)
-    # order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
+    order_id = Column(Integer, nullable=True)
     idempotency_key = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

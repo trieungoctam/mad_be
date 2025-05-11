@@ -159,6 +159,7 @@ def validate_bank_card(card_details: Dict[str, str]) -> tuple[bool, str]:
         return False, "Invalid expiry date format"
 
     # Validate CVV (3-4 digits)
+    cvv = str(cvv)
     if not cvv or not cvv.isdigit() or not (3 <= len(cvv) <= 4):
         return False, "Invalid CVV"
 
