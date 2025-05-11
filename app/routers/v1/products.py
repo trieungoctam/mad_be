@@ -16,54 +16,104 @@ from app.schemas.product import (
     ProductUpdate,
     ProductVariantCreate,
     ProductVariantUpdate,
-    ProductImageCreate
+    ProductImageCreate,
+    CategoryCreate,
+    BrandCreate
 )
 from app.services.product import (
     add_product_variant,
     add_product_image,
-    add_to_favorites,
     compare_product_prices,
     create_product,
     delete_product,
     get_product_variant,
-    get_user_favorites,
     get_product,
     get_products,
     get_product_by_barcode,
     get_product_by_category,
-    is_favorite,
     update_product_variant,
-    remove_from_favorites,
     update_product,
-    search_products
+    create_brand,
+    create_category,
+    get_product_image,
+    get_product_variants,
+    delete_product_variant,
+    get_parent_categories,
+    get_all_categories,
 )
+from app.services.product import get_all_brands as service_get_all_brands
+from app.services.product import get_all_categories as service_get_all_categories
+from app.core.security import create_access_token
 
 router = APIRouter()
 
+# async def create_brand_endpoint(
+#     brand_in: BrandCreate,
+#     db: AsyncSession = Depends(get_db),
+#     current_user: User = Depends(get_current_active_user),
+# ) -> Any:
+#     """
+#     Create a new brand
+#     """
+#     return await create_brand(db=db, brand=brand_in, user_id=current_user.id)
 
-@router.get("/", response_model=None)
+# async def create_category_endpoint(
+#     category_in: CategoryCreate,
+#     db: AsyncSession = Depends(get_db),
+#     current_user: User = Depends(get_current_active_user),
+# ) -> Any:
+#     """
+#     Create a new category
+#     """
+#     return await create_category(db=db, category=category_in, user_id=current_user.id)
+
+
+@router.get("/brands")
+async def get_all_brands(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """
+    Get all brands
+    """
+    return await service_get_all_brands(db=db)
+
+@router.get("/categories")
+async def get_all_categories(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """
+    Get all categories
+    """
+    return await service_get_all_categories(db=db)
+
+
+@router.get("/", response_model=Any)
 async def read_products(
-    pagination: PaginationParams = Depends(),
+    db: AsyncSession = Depends(get_db),
+    skip: int = 0,
+    limit: int = 10,
     category_id: Optional[int] = None,
     brand_id: Optional[int] = None,
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
-    search: Optional[str] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_active_user_optional),
+    search: Optional[str] = Query(None, min_length=1),
+    current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
-    Get all products with filtering and pagination
+    Get all products with optional filters
+
+    - **skip**: Number of products to skip (for pagination)
+    - **limit**: Maximum number of products to return
+    - **category_id**: Filter by category ID
+    - **brand_id**: Filter by brand ID
+    - **min_price**: Filter by minimum price
+    - **max_price**: Filter by maximum price
+    - **search**: Search term to filter products
     """
     return await get_products(
-        db=db,
-        skip=(pagination.page - 1) * pagination.limit,
-        limit=pagination.limit,
-        category_id=category_id,
-        brand_id=brand_id,
-        min_price=min_price,
-        max_price=max_price,
-        search=search,
+        db, skip, limit, category_id, brand_id, min_price, max_price, search
     )
 
 
