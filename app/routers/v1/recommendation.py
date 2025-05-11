@@ -18,10 +18,10 @@ class SuggestResponse(BaseModel):
     suggestions: List[str]
 
 # --- Create FastAPI router ---
-router = APIRouter(tags=["recommendation"])
+router = APIRouter()
 
 # --- Cấu hình đường dẫn đến các file model ---
-MODEL_DIR = '../../saved_model_components'
+MODEL_DIR = 'saved_model_components'
 VECTORIZER_PATH = os.path.join(MODEL_DIR, 'tfidf_vectorizer.joblib')
 MATRIX_PATH = os.path.join(MODEL_DIR, 'product_tfidf_matrix.joblib')
 PRODUCT_INFO_PATH = os.path.join(MODEL_DIR, 'product_info_df.pkl')
