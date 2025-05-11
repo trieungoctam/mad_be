@@ -2,7 +2,11 @@ import re
 import json
 import logging
 import secrets
-from datetime import datetime
+import hashlib
+import urllib.parse
+import hmac
+from datetime import datetime, timedelta
+import pytz
 from typing import Dict, Any, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -40,6 +44,13 @@ async def save_bank_card(db: AsyncSession, card_details: BankCardDetails, user_i
         ValueError: If card details are invalid
     """
     # Validate card details
+    card_details_dict = {
+        "card_number": card_details.card_number,
+        "card_holder_name": card_details.card_holder_name,
+        "expiry_month": card_details.expiry_month,
+        "expiry_year": card_details.expiry_year,
+        "cvv": card_details.cvv
+    }
     is_valid, error_message = validate_bank_card(card_details)
     if not is_valid:
         raise ValueError(f"Invalid card details: {error_message}")
@@ -250,7 +261,7 @@ async def process_bank_card_payment(
     }
 
     # Payment
-
+    # Implement payment gateway API call here
 
     return PaymentResponse(
         success=True,
@@ -271,6 +282,8 @@ async def process_cod_payment(db: AsyncSession, order: Order, user_id: int) -> P
         payment_status="completed",
         order_id=order.id
     )
+
+
 
 async def get_order_transactions(db: AsyncSession, order_id: int) -> List[PaymentSchema]:
     """
