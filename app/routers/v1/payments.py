@@ -2,12 +2,16 @@ from typing import Any, List, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from sqlalchemy import update, delete
 
 from app.auth.deps import get_current_active_user
 from app.db.session import get_db
 from app.models.order import Order
 from app.models.transaction import TransactionStatus
 from app.models.user import User
+from app.models.card import Card
+from app.models.payment import Payment
 from app.schemas.base import BaseAPIResponse
 from app.schemas.payment import (
     BankCardDetails,
@@ -16,9 +20,8 @@ from app.schemas.payment import (
     TransactionPaginated,
 )
 from app.schemas.order import OrderIn, OrderCreate
-from app.schemas.card import NewCard, Card
+from app.schemas.card import NewCard
 from app.schemas.payment import PaymentSchema
-from app.models.payment import Payment
 from app.services.payment import (
     get_order_transactions,
     process_bank_card_payment as service_process_bank_card_payment,
