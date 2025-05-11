@@ -60,7 +60,17 @@ async def get_cards(db: AsyncSession = Depends(get_db), current_user: User = Dep
     """
     Get all cards for a user
     """
-    return await get_cards_by_user_id(db=db, user_id=current_user.id)
+    results = await get_cards_by_user_id(db=db, user_id=current_user.id)
+    cards = [CardSchema(
+        id=card.id,
+        user_id=card.user_id,
+        card_holder_name=card.card_holder_name,
+        card_number=card.card_number,
+        expiry_month=card.expiry_month,
+        expiry_year=card.expiry_year,
+        is_default=card.is_default
+    ) for card in results]
+    return cards
 
 @router.post("/process-payment/card/{card_id}", response_model=PaymentResponse)
 async def process_bank_card_payment(
