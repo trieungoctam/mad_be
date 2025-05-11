@@ -20,7 +20,7 @@ from app.schemas.payment import (
     TransactionPaginated,
 )
 from app.schemas.order import OrderIn, OrderCreate
-from app.schemas.card import NewCard
+from app.schemas.card import NewCard, Card as CardSchema
 from app.schemas.payment import PaymentSchema
 from app.services.payment import (
     get_order_transactions,
@@ -55,7 +55,7 @@ async def save_bank_card_setting(
             detail=str(e)
         )
 
-@router.get("/cards", response_model=List[Card])
+@router.get("/cards", response_model=List[CardSchema])
 async def get_cards(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_active_user)) -> Any:
     """
     Get all cards for a user
