@@ -77,6 +77,32 @@ def upgrade() -> None:
     except (sa.exc.OperationalError, sa.exc.ProgrammingError):
         pass
 
+    # Drop constraints on list_items and shared_lists that depend on shopping_lists
+    try:
+        op.drop_constraint('list_items_list_id_fkey', 'list_items', type_='foreignkey')
+        # If needed, also drop the column
+        op.drop_column('list_items', 'list_id')
+    except (sa.exc.OperationalError, sa.exc.ProgrammingError):
+        pass
+
+    try:
+        op.drop_constraint('shared_lists_list_id_fkey', 'shared_lists', type_='foreignkey')
+        # If needed, also drop the column
+        op.drop_column('shared_lists', 'list_id')
+    except (sa.exc.OperationalError, sa.exc.ProgrammingError):
+        pass
+
+    # Drop the tables that depend on shopping_lists if needed
+    try:
+        op.drop_table('list_items')
+    except (sa.exc.OperationalError, sa.exc.ProgrammingError):
+        pass
+
+    try:
+        op.drop_table('shared_lists')
+    except (sa.exc.OperationalError, sa.exc.ProgrammingError):
+        pass
+
     # Now drop tables if they exist
     try:
         op.drop_index('ix_shopping_lists_id', table_name='shopping_lists')
