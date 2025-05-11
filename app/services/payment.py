@@ -51,7 +51,7 @@ async def save_bank_card(db: AsyncSession, card_details: BankCardDetails, user_i
         "expiry_year": card_details.expiry_year,
         "cvv": card_details.cvv
     }
-    is_valid, error_message = validate_bank_card(card_details)
+    is_valid, error_message = validate_bank_card(card_details_dict)
     if not is_valid:
         raise ValueError(f"Invalid card details: {error_message}")
 
