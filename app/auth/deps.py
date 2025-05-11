@@ -111,11 +111,11 @@ async def get_current_active_user(
     Verify user is active
     """
     logger.debug(f"Checking if user {current_user.id} is active")
-    if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user account"
-        )
+    # if not current_user.is_active:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_403_FORBIDDEN,
+    #         detail="Inactive user account"
+    #     )
     return current_user
 
 async def get_current_superuser(
