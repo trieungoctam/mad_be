@@ -137,7 +137,7 @@ async def process_bank_card_payment(
             )
 
             # Update payment status based on processing result
-            # payment.status = payment_bank_result.payment_status
+            payment.status = payment_bank_result.payment_status
             await db.commit()
             await db.refresh(payment)
 

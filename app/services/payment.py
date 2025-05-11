@@ -174,22 +174,6 @@ def validate_bank_card(card_details: Dict[str, str]) -> tuple[bool, str]:
     if not cvv or not cvv.isdigit() or not (3 <= len(cvv) <= 4):
         return False, "Invalid CVV"
 
-    # Luhn algorithm for card number validation (ISO/IEC 7812)
-    # This is a standard checksum formula used by credit/debit card issuers
-    # to validate card numbers and detect data entry errors
-    digits = [int(d) for d in card_number]
-    checksum = 0
-
-    for i, digit in enumerate(reversed(digits)):
-        if i % 2 == 1:  # Odd position (0-indexed from right)
-            digit *= 2
-            if digit > 9:
-                digit -= 9
-        checksum += digit
-
-    if checksum % 10 != 0:
-        return False, "Invalid card number (checksum failed)"
-
     return True, ""
 
 
