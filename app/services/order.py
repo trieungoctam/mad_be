@@ -313,45 +313,14 @@ async def update_order_status(
     await db.commit()
     await db.refresh(order)
 
-    # Update shipment status if needed
-    shipment_result = await db.execute(select(Shipment).where(Shipment.order_id == order.id))
-    shipment = shipment_result.scalars().first()
-
-    if shipment:
-        # Map order status to shipment status
-        shipment_status = None
-        if status == OrderStatus.PROCESSING:
-            shipment_status = ShipmentStatus.PROCESSING
-        elif status == OrderStatus.SHIPPED:
-            shipment_status = ShipmentStatus.IN_TRANSIT
-        elif status == OrderStatus.DELIVERED:
-            shipment_status = ShipmentStatus.DELIVERED
-        elif status == OrderStatus.CANCELLED:
-            shipment_status = ShipmentStatus.CANCELLED
-        elif status == OrderStatus.RETURNED:
-            shipment_status = ShipmentStatus.RETURNED
-
-        if shipment_status and shipment.status != shipment_status:
-            await update_shipment_status(
-                db=db,
-                shipment=shipment,
-                status=shipment_status,
-                description=f"Order status updated to {status}",
-                user_id=user_id
-            )
-    else:
-        # Create shipment if order is being processed or shipped
-        if status in [OrderStatus.PROCESSING, OrderStatus.SHIPPED]:
-            await create_shipment_from_order(db=db, order=order)
-
-    # Send notification
-    await create_notification(
-        db=db,
-        user_id=order.user_id,
-        notification_type="order_status_updated",
-        content=f"Your order #{order.id} status has been updated to {status}.",
-        related_entity_id=order.id
-    )
+    # # Send notification
+    # await create_notification(
+    #     db=db,
+    #     user_id=order.user_id,
+    #     notification_type="order_status_updated",
+    #     content=f"Your order #{order.id} status has been updated to {status}.",
+    #     related_entity_id=order.id
+    # )
 
     return order
 

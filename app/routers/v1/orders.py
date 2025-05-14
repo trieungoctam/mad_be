@@ -16,7 +16,8 @@ from app.services.order import (
     update_order_status,
     update_payment_status,
     update_shipping_details,
-    cancel_order
+    cancel_order,
+    get_order_items
 )
 
 router = APIRouter()
@@ -84,3 +85,28 @@ async def read_order(
         "updated_at": order.updated_at,
         "items": order.items
     }
+
+@router.put("/{order_id}/status")
+async def update_order_status(
+    order_id: int,
+    status: OrderStatus,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """
+    Update the status of an order
+    """
+    order = await get_order(db=db, order_id=order_id)
+
+    # Update order status
+    await update_order_status(db=db, order_id=order_id, status=status)
+
+    return {"message": "Order status updated successfully"}
+
+@router.get("/{order_id}/items")
+async def get_order_items(db: AsyncSession, order_id: int) -> List[Any]:
+    """
+    Get all items in an order
+    """
+    order_items = await get_order_items(db=db, order_id=order_id)
+    return order_items
