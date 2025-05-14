@@ -282,7 +282,7 @@ async def get_user_orders(
     }
 
 
-async def get_order_items(db: AsyncSession, order_id: int) -> List[OrderItem]:
+async def get_order_items_by_order_id(db: AsyncSession, order_id: int) -> List[OrderItem]:
     """
     Get all items in an order
     """

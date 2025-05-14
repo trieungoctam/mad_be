@@ -17,7 +17,7 @@ from app.services.order import (
     update_payment_status,
     update_shipping_details,
     cancel_order,
-    get_order_items
+    get_order_items_by_order_id
 )
 
 router = APIRouter()
@@ -50,7 +50,7 @@ async def read_orders(
     ]
     return orders_list
 
-@router.get("/{order_id}", response_model=Order)
+@router.get("/{order_id}")
 async def read_order(
     order_id: int,
     db: AsyncSession = Depends(get_db),
@@ -62,7 +62,7 @@ async def read_order(
     order = await get_order(db=db, order_id=order_id)
 
     # Check if order exists and belongs to current user
-    if not order or (order.user_id != current_user.id and not current_user.is_superuser):
+    if not order:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Order not found",
@@ -77,10 +77,7 @@ async def read_order(
         "total_amount": order.total_amount,
         "payment_status": order.payment_status,
         "payment_method": order.payment_method,
-        "shipping_address_id": order.shipping_address_id,
-        "created_at": order.created_at,
-        "updated_at": order.updated_at,
-        "items": order.items
+        "shipping_address_id": order.shipping_address_id
     }
 
 @router.put("/{order_id}/status")
@@ -101,20 +98,21 @@ async def update_order_status(
     return {"message": "Order status updated successfully"}
 
 @router.get("/{order_id}/items")
-async def get_order_items(order_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_active_user)) -> List[Any]:
+async def get_order_items_by(order_id: int, db: AsyncSession = Depends(get_db),
+                          current_user: User = Depends(get_current_active_user)) -> List[Any]:
     """
     Get all items in an order
     """
     order = await get_order(db=db, order_id=order_id)
 
     # Check if order exists and belongs to current user
-    if not order or (order.user_id != current_user.id and not current_user.is_superuser):
+    if not order:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Order not found",
         )
 
-    order_items = await get_order_items(db=db, order_id=order_id)
+    order_items = await get_order_items_by_order_id(db=db, order_id=order_id)
     items = []
     for item in order_items:
         items.append({
