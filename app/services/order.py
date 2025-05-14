@@ -294,7 +294,7 @@ async def get_order_items_by_order_id(db: AsyncSession, order_id: int) -> List[O
 
 
 async def update_order_status(
-    db: AsyncSession, order: Order, status: str, user_id: int
+    db: AsyncSession, order: Order, status: str
 ) -> Order:
     """
     Update an order's status and synchronize with shipment status

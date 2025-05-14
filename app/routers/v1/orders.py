@@ -81,7 +81,7 @@ async def read_order(
     }
 
 @router.put("/{order_id}/status")
-async def update_order_status(
+async def update_order(
     order_id: int,
     status: OrderStatus,
     db: AsyncSession = Depends(get_db),
@@ -91,9 +91,14 @@ async def update_order_status(
     Update the status of an order
     """
     order = await get_order(db=db, order_id=order_id)
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found",
+        )
 
     # Update order status
-    await update_order_status(db=db, order_id=order_id, status=status)
+    await update_order_status(db=db, order=order, status=status)
 
     return {"message": "Order status updated successfully"}
 
