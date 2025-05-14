@@ -78,9 +78,6 @@ async def read_order(
         "payment_status": order.payment_status,
         "payment_method": order.payment_method,
         "shipping_address_id": order.shipping_address_id,
-        "shipping_carrier": order.shipping_carrier,
-        "tracking_number": order.tracking_number,
-        "estimated_delivery_date": order.estimated_delivery_date,
         "created_at": order.created_at,
         "updated_at": order.updated_at,
         "items": order.items
