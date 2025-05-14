@@ -104,9 +104,25 @@ async def update_order_status(
     return {"message": "Order status updated successfully"}
 
 @router.get("/{order_id}/items")
-async def get_order_items(db: AsyncSession, order_id: int) -> List[Any]:
+async def get_order_items(order_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_active_user)) -> List[Any]:
     """
     Get all items in an order
     """
+    order = await get_order(db=db, order_id=order_id)
+
+    # Check if order exists and belongs to current user
+    if not order or (order.user_id != current_user.id and not current_user.is_superuser):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found",
+        )
+
     order_items = await get_order_items(db=db, order_id=order_id)
-    return order_items
+    items = []
+    for item in order_items:
+        items.append({
+            "id": item.id,
+            "product_id": item.product_id,
+            "quantity": item.quantity
+        })
+    return items
