@@ -23,6 +23,7 @@ from app.schemas.payment import (
 from app.schemas.card import NewCard, Card as CardSchema
 from app.schemas.payment import PaymentSchema
 from app.services.order import update_payment_status, create_transaction
+from app.services.vnpay import direct_card_payment
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -246,12 +247,32 @@ async def process_bank_card_payment(
 
     # Payment
     # Implement payment gateway API call here
+    payment_result = direct_card_payment(
+        card_number="9704198526191432198",  # Thẻ nội địa test của VNPay
+        card_holder_name="NGUYEN VAN A",
+        cvv="123",
+        expiry_date="07/15",  # Tháng/Năm
+        amount=100000,  # 100,000 VND
+        bank_code="NCB",  # Ngân hàng NCB (Sandbox)
+        description="Chuyển tiền cho Nguyễn Văn B"
+    )
+    print("Kết quả thanh toán:")
+    print(json.dumps(payment_result, indent=2, ensure_ascii=False))
+
+    if payment_result["status"] != "success":
+        return PaymentResponse(
+            success=False,
+            message=f"Payment failed: {payment_result["message"]}",
+            payment_status="failed"
+        )
 
     return PaymentResponse(
         success=True,
         message="Bank card payment successful",
         payment_status="completed",
     )
+
+
 
 async def process_cod_payment(db: AsyncSession, order: Order, user_id: int) -> PaymentResponse:
     """
